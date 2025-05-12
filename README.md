@@ -25,8 +25,12 @@ Install Docker (with NVIDIA support if available):
 bash install_docker.sh -n     # (Re)install Docker
 bash build_docker.sh -n       # Build Docker container
 bash run_docker.sh -n         # Run Docker container
+```
 
-####  🐅 Access the running container:
+---
+
+#### 🐅 Access the running container:
+
 
 ```bash
 bash into_docker.sh
