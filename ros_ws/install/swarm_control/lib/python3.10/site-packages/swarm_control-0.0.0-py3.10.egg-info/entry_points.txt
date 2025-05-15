@@ -1,0 +1,3 @@
+[console_scripts]
+my_node = swarm_control.my_node:main
+
