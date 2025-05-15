@@ -34,3 +34,28 @@ bash run_docker.sh -n         # Run Docker container
 
 ```bash
 bash into_docker.sh
+
+### 🚀 Quick Start with Scripts
+
+1. **Clone this repository**  
+
+2. **Install Docker** if needed:  
+   \`\`\`bash
+   bash docker/install_docker.sh -n
+   \`\`\`
+
+3. **Build Docker image**:  
+   \`\`\`bash
+   bash docker/build_docker.sh -n
+   \`\`\`
+
+4. **Run container with one command**:  
+   \`\`\`bash
+   ./docker/run_container.sh
+   \`\`\`
+
+5. *(Optional)* Run a second container for echoing or debugging:*  
+   \`\`\`bash
+   ./docker/run_echo.sh
+   \`\`\`
+
