@@ -8,5 +8,11 @@ def generate_launch_description():
             executable='my_node',
             name='my_node',
             output='screen'
+        ),
+        Node(
+            package='swarm_control',
+            executable='listener_node',
+            name='listener_node',
+            output='screen'
         )
     ])

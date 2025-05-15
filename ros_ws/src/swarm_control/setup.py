@@ -21,6 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+        'listener_node = swarm_control.listener_node:main',
         'my_node = swarm_control.my_node:main',
         ],
     },
