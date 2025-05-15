@@ -1,0 +1,16 @@
+# ROS build artifacts
+ros_ws/build/
+ros_ws/install/
+ros_ws/log/
+
+# Bytecode and editor clutter
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# System and user cache
+.cache/
+.config/
+.local/
+.python_history
