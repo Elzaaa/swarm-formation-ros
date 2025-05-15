@@ -8,6 +8,7 @@ setup.py
 ../../build/swarm_control/swarm_control.egg-info/requires.txt
 ../../build/swarm_control/swarm_control.egg-info/top_level.txt
 ../../build/swarm_control/swarm_control.egg-info/zip-safe
+launch/my_node_launch.py
 resource/swarm_control
 swarm_control/__init__.py
 swarm_control/my_node.py

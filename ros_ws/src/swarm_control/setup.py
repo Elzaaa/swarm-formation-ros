@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/swarm_control/launch', ['launch/my_node_launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
