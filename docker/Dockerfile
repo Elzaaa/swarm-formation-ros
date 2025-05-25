@@ -1,24 +1,24 @@
-ARG from=ubuntu:22.04
+ARG from
 
 FROM ${from}
 
-LABEL maintainer="rubenandres.contreras25@gmail.com"
+LABEL Ruben Contreras "rubenandres,contreras25@gmail.com"
+
 
 # Timezone Configuration
 ENV TZ=Europe/Berlin
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND = noninteractive
 
 # Local install
-RUN apt update && apt install -y locales \
-    && locale-gen en_US en_US.UTF-8 \
-    && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
-    && export LANG=en_US.UTF-8
+RUN apt update && apt install locales
+RUN locale-gen en_US en_US.UTF-8
+RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+RUN export LANG=en_US.UTF-8
 
-
-# Install dependencies
-RUN apt-get update && apt-get install -y apt-utils\
-    software-properties-common \  
+# Apps install
+RUN apt-get update && apt-get install -y apt-utils \
+    software-properties-common \
     lsb-release \
     mesa-utils \
     gnupg2 \
@@ -31,96 +31,72 @@ RUN apt-get update && apt-get install -y apt-utils\
     mc \
     vim \
     gedit \
-    python3 \
+    python2 \
+    python-dev \
     python3-pip \
     gcc \
+    gfortran \
+    libopenblas-dev \ 
     cmake \
-    libssl-dev \
-    libncurses5-dev \
-    libsqlite3-dev \
-    libreadline-dev \
-    libffi-dev \
-    uuid-dev \
-    zlib1g-dev \
-    libbullet-dev 
+    ffmpeg
 
-# Install ROS 2 Humble Desktop and Packages
-RUN echo "deb [arch=amd64] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2-latest.list 
+
+# Install ROS desktop and Gazebo
+RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list
 RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
-# RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
-    
-RUN apt-get update && apt-get install -y ros-humble-desktop \
-    ros-humble-ros-base \
-    ros-humble-teleop-twist-joy \
-    ros-humble-teleop-twist-keyboard \
-    ros-humble-gazebo-ros-pkgs \
-    ros-humble-eigen-stl-containers \
-    ros-humble-random-numbers \
-    ros-humble-moveit-common \
-    ros-humble-navigation2 \
-    ros-humble-nav2-bringup \
-    ros-humble-turtlebot3* \
-    ros-humble-gazebo-* \
-    ros-humble-cartographer \
-    ros-humble-cartographer-ros \
-    python3-argcomplete \
-    python3-pytest-cov \
-    python3-flake8 \
-    python3-rosdep \
-    python3-setuptools \
-    python3-vcstool \
-    python3-colcon-mixin \
-    python3-colcon-common-extensions 
 
-# Configure colcon mixin
-RUN colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && colcon mixin update default
+RUN apt-get update && apt-get install -y ros-noetic-desktop-full \
+    ros-noetic-joy ros-noetic-teleop-twist-joy \
+    ros-noetic-teleop-twist-keyboard ros-noetic-laser-proc \
+    ros-noetic-rgbd-launch ros-noetic-rosserial-arduino \
+    ros-noetic-rosserial-python ros-noetic-rosserial-client \
+    ros-noetic-rosserial-msgs ros-noetic-amcl ros-noetic-map-server \
+    ros-noetic-move-base ros-noetic-urdf ros-noetic-xacro \
+    ros-noetic-compressed-image-transport ros-noetic-rqt* ros-noetic-rviz \
+    ros-noetic-gmapping ros-noetic-navigation ros-noetic-interactive-markers \
+    ros-noetic-dynamixel-sdk \
+    ros-noetic-turtlebot3-msgs \
+    ros-noetic-turtlebot3
 
-# Installing Python3 components 
-RUN python3 -m pip install -U \
-    argcomplete \
-    flake8-blind-except \
-    flake8-builtins \
-    flake8-class-newline \
-    flake8-comprehensions \
-    flake8-deprecated \
-    flake8-docstrings \ 
-    flake8-import-order \
-    flake8-quotes \
-    pytest-repeat \
-    pytest-rerunfailures \
-    pytest 
 
-# Initialize rosdep
-RUN rosdep init && rosdep update
+# GUI tunnel from docker
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    libxau6 libxau6:i386 \
+    libxdmcp6 libxdmcp6:i386 \
+    libxcb1 libxcb1:i386 \
+    libxext6 libxext6:i386 \
+    libx11-6 libx11-6:i386 && \
+    rm -rf /var/lib/apt/lists/*
 
-#----------------------------------------------------------------------------------
-# Create workspace and download MoveIt 2 source code
-RUN mkdir -p ~/humble_ws/src && cd ~/humble_ws/src && \
-    git clone -b humble https://github.com/ROBOTIS-GIT/DynamixelSDK.git && \
-    git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git && \
-    git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3.git
-#     git clone -b humble https://github.com/moveit/moveit2_tutorials && \
-#     vcs import --recursive < moveit2_tutorials/moveit2_tutorials.repos
+# nvidia-container-runtime
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
 
-# Install dependencies for workspace
-RUN cd ~/humble_ws && \
-    sudo apt update && \
-    rosdep install -r --from-paths . --ignore-src --rosdistro humble -y
+RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
+    echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
 
-# Build the Colcon Workspace with proper sourcing
-RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
-    cd ~/humble_ws && \
-    colcon build --mixin release --executor sequential"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglvnd0 libglvnd0:i386 \
+    libgl1 libgl1:i386 \
+    libglx0 libglx0:i386 \
+    libegl1 libegl1:i386 \
+    libgles2 libgles2:i386 && \
+    rm -rf /var/lib/apt/lists/*
 
-# Source ROS 2 and Colcon Workspace on container start
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
-    echo "source ~/humble_ws/install/setup.bash" >> ~/.bashrc && \
-    echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> ~/.bashrc && \
-    echo 'source /usr/share/gazebo/setup.sh' >> ~/.bashrc
+COPY docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 
-# Clean up
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Required for non-glvnd setups.
+ENV LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 
-# Entry point: Open a bash shell with sourced ROS environment
-ENTRYPOINT ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source ~/humble_ws/install/setup.bash && exec bash"]
+                 
+RUN echo "source /opt/ros/noetic/setup.bash"  >> ~/.bashrc 
+
+ENV source /opt/ros/noetic/setup.bash
+
+
+RUN echo 'source ~/../noetic_ws/devel/setup.bash' >> ~/.bashrc \
+    && echo 'export TURTLEBOT3_MODEL=burger' >> ~/.bashrc
 

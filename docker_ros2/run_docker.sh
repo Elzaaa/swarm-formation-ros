@@ -3,7 +3,7 @@
 xhost +local:docker || true
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-
+echo $ROOT_DIR
 if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
   then
     docker run --gpus all \
@@ -13,10 +13,11 @@ if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
                 -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
                 -e XAUTHORITY \
                 -v /dev:/dev \
-                -v $ROOT_DIR/noetic_ws:/noetic_ws \
                --net=host \
                --privileged \
-               --name ros-noetic ros-noetic-img
+                -v "$ROOT_DIR/humble_ws:/humble_ws/" \
+                # --volume="$ROOT_DIR/workspace/:/ws_moveit/" \
+               --name ros-humble ros-humble-img
 
 else
 
@@ -27,8 +28,8 @@ else
                 -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
                 -e XAUTHORITY \
                 -v /dev:/dev \
-                -v $ROOT_DIR/noetic_ws:/noetic_ws \
+                -v "/home/$USER/ros-humble/humble_ws:/humble_ws/" \
                --net=host \
                --privileged \
-               --name ros-noetic ros-noetic-img
+               --name ros-humble ros-humble-img
 fi
