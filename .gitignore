@@ -14,3 +14,22 @@ __pycache__/
 .config/
 .local/
 .python_history
+
+# Catkin workspace (correct name)
+noetic_ws/build/
+noetic_ws/devel/
+noetic_ws/install/
+noetic_ws/log/
+
+# External packages (cloned during setup)
+noetic_ws/src/DynamixelSDK/
+noetic_ws/src/hls_lfcd_lds_driver/
+noetic_ws/src/turtlebot3/
+noetic_ws/src/turtlebot3_machine_learning/
+noetic_ws/src/turtlebot3_msgs/
+noetic_ws/src/turtlebot3_simulations/
+
+# Editor backup files
+*.save
+*.swp
+*~
