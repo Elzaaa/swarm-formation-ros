@@ -1,19 +1,19 @@
 # Swarm Navigation with Formation Control
 
 This project is developed as part of the **ROS Programming elective course** at the Deggendorf Institute of Technology (THD).  
-The goal is to implement swarm navigation with formation control using ROS 2 (Humble) and the Moveti2 platform.  
-The system aims to coordinate multiple mobile robots while maintaining a predefined formation, such as a line or V-shape, during navigation.
+The goal is to implement swarm navigation with formation control using **ROS 1 (Noetic)** and mobile robots such as **TurtleBot3**.  
+The system coordinates multiple robots to maintain formations (e.g., line or V-shape) during navigation while avoiding obstacles.
 
 ---
 
 ### 🐳 Docker Scripts
 
 Here are some scripts that simplify working with this project.  
-The setup is based on [TCC-ROS/ros-humble](https://github.com/TCC-ROS/ros-humble), originally created for the ROS Programming Course at THD.
+The setup is based on [TCC-ROS/ros-humble](https://github.com/TCC-ROS/ros-humble](https://github.com/TCC-ROS/ros-noetic), originally created for the ROS Programming Course at THD.
 
 > **Platform:** Ubuntu 22.04  
-> **ROS2 Version:** Humble  
-> **Target Robot:** Moveti2
+> **ROS Version:** Noetic  
+> **Target Robots:** TurtleBot3 or simulated agents
 
 ---
 
@@ -35,28 +35,4 @@ bash run_docker.sh -n         # Run Docker container
 ```bash
 bash into_docker.sh
 ```
-
-### 🚀 Quick Start with Scripts
-
-1. **Clone this repository**  
-
-2. **Install Docker** if needed:  
-   ```bash
-   bash docker/install_docker.sh -n
-   ```
-
-3. **Build Docker image**:  
-   ```bash
-   bash docker/build_docker.sh -n
-   ```
-
-4. **Run container with one command**:  
-   ```bash
-   ./docker/run_container.sh
-   ```
-
-5. *(Optional)* Run a second container for echoing or debugging:*  
-   ```bash
-   ./docker/run_echo.sh
-   ```
 
