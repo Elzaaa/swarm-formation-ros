@@ -9,7 +9,7 @@ The system coordinates multiple robots to maintain formations (e.g., line or V-s
 ### 🐳 Docker Scripts
 
 Here are some scripts that simplify working with this project.  
-The setup is based on [TCC-ROS/ros-humble](https://github.com/TCC-ROS/ros-humble](https://github.com/TCC-ROS/ros-noetic), originally created for the ROS Programming Course at THD.
+The setup is based on The setup is based on [TCC-ROS/ros-noetic](https://github.com/TCC-ROS/ros-noetic), originally created for the ROS Programming Course at THD.
 
 > **Platform:** Ubuntu 22.04  
 > **ROS Version:** Noetic  
