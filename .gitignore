@@ -34,3 +34,5 @@ noetic_ws/src/turtlebot3_simulations/
 *.swp
 *~
 *.save*
+noetic_ws/build/
+noetic_ws/devel/
