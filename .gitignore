@@ -1,27 +1,32 @@
-# ROS build artifacts
+# === ROS build artifacts ===
 ros_ws/build/
 ros_ws/install/
 ros_ws/log/
-
-# Bytecode and editor clutter
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-
-# System and user cache
-.cache/
-.config/
-.local/
-.python_history
-
-# Catkin workspace (correct name)
 noetic_ws/build/
 noetic_ws/devel/
 noetic_ws/install/
 noetic_ws/log/
 
-# External packages (cloned during setup)
+# === Python artifacts ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# === System/user cache ===
+.cache/
+.config/
+.local/
+.python_history
+
+# === Editor/IDE clutter ===
+*.swp
+*.swo
+*.save
+*.save*
+*~
+
+# === Exclude external cloned ROS packages (if not modified) ===
 noetic_ws/src/DynamixelSDK/
 noetic_ws/src/hls_lfcd_lds_driver/
 noetic_ws/src/turtlebot3/
@@ -29,10 +34,3 @@ noetic_ws/src/turtlebot3_machine_learning/
 noetic_ws/src/turtlebot3_msgs/
 noetic_ws/src/turtlebot3_simulations/
 
-# Editor backup files
-*.save
-*.swp
-*~
-*.save*
-noetic_ws/build/
-noetic_ws/devel/
