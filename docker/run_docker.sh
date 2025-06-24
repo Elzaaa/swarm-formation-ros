@@ -14,6 +14,7 @@ if [[ $1 = "--nvidia" ]] || [[ $1 = "-n" ]]
                 -e XAUTHORITY \
                 -v /dev:/dev \
                 -v $ROOT_DIR/noetic_ws:/noetic_ws \
+                -v $ROOT_DIR/venv:/venv \
                --net=host \
                --privileged \
                --name ros-noetic ros-noetic-img
@@ -28,6 +29,7 @@ else
                 -e XAUTHORITY \
                 -v /dev:/dev \
                 -v $ROOT_DIR/noetic_ws:/noetic_ws \
+                -v $ROOT_DIR/venv:/venv \
                --net=host \
                --privileged \
                --name ros-noetic ros-noetic-img
