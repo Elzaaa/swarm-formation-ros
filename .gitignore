@@ -29,6 +29,9 @@ noetic_ws/src/turtlebot3_machine_learning/
 noetic_ws/src/turtlebot3_msgs/
 noetic_ws/src/turtlebot3_simulations/
 
+#Python virtual environment
+venv/
+
 # Editor backup files
 *.save
 *.swp
