@@ -38,7 +38,8 @@ RUN apt-get update && apt-get install -y apt-utils \
     gfortran \
     libopenblas-dev \ 
     cmake \
-    ffmpeg
+    ffmpeg \
+    libeigen3-dev 
 
 
 # Install ROS desktop and Gazebo
