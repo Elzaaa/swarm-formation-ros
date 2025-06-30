@@ -54,14 +54,17 @@ def map_callback(msg):
     print("Map resolution: {}".format(msg.info.resolution))
     print("Map origin: ({}, {})".format(msg.info.origin.position.x, msg.info.origin.position.y))
     map_matrix = np.array(msg.data).reshape((msg.info.height, msg.info.width))
-    goal = (2, 4)  # Example goal position
-    start = time.time()
-    potential_map = calculate_potential_field(map_matrix, goal)
-    print("Potential field calculated.")
-    end = time.time()
-    print(end - start, "seconds to calculate potential field")
+    # goal = (2, 4)  # Example goal position
+    # start = time.time()
+    # potential_map = calculate_potential_field(map_matrix, goal)
+    # print("Potential field calculated.")
+    # end = time.time()
+    # print(end - start, "seconds to calculate potential field")
     # Draw heatmap
+    
     draw_heatmap(map_matrix)
+    np.savetxt('map.txt', map_matrix, fmt='%d')
+    print("Map saved to map.txt")
     plt.show()
 
 
