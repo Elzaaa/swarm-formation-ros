@@ -37,19 +37,27 @@ def calculate_potential_field(map_matrix, obstacles, radius, goal, repulsive_gai
     # unknowns = np.argwhere(map_matrix == -1)
     all_repulsors = obstacles  # To treat unknowns as obstacles: np.vstack([obstacles, unknowns])
     U_rep = np.zeros((rows * cols,), dtype=float)
+    U_rep2 = np.zeros((rows * cols,), dtype=float)
 
     if all_repulsors.shape[0] > 0:
         # Compute distances from all cells to all obstacles
         dists = cdist(coords, all_repulsors)
-        mask = (dists < radius + repulsive_range) & (dists != 0)
+        mask = (radius < dists) & (dists < (repulsive_range+radius))  & (dists != 0)
         with np.errstate(divide='ignore'):
             rep_term = 0.5 * repulsive_gain * (1.0/dists - 1.0/repulsive_range)**2
         rep_term[~mask] = 0
         U_rep = np.sum(rep_term, axis=1)
+
+        mask2 = (dists < radius) & (dists != 0)
+        with np.errstate(divide='ignore'):
+            rep_term2 = np.ones_like(rep_term) * repulsive_gain/5
+        rep_term2[~mask2] = 0
+        U_rep2 = np.sum(rep_term2, axis=1)
     U_rep = U_rep.reshape(rows, cols)
+    U_rep2 = U_rep2.reshape(rows, cols)
 
     # High potential for obstacles and unknowns
-    potential_map = U_rep
+    potential_map = U_att + U_rep + U_rep2
     # high_potential_mask = (map_matrix == 100) #| (map_matrix == -1)
     # potential_map[high_potential_mask] = 150
 
