@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from clusters import find_obstacles, find_clusters, find_clusters_centers
 
 def open_matrix() -> np.ndarray: 
-    b = np.loadtxt('map.txt', dtype=int)
+    b = np.loadtxt('raw_map.txt', dtype=int)
     return b
 
 def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.ndarray:
