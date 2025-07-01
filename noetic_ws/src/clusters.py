@@ -19,18 +19,20 @@ def find_clusters(X: np.ndarray) -> np.ndarray:
     db = DBSCAN(eps=3, min_samples=5).fit(X)
     return db.labels_
 
-def find_clusters_centers(labels, unique_labels, X) -> np.ndarray:
+def find_clusters_centers(labels, unique_labels, X):
     """Finds the centers of clusters in the map maunique_labels = set(labels) - {-1}  # Exclude noise label (-1)trix.
     :return: An array of cluster centers.
     """
     centers = []
+    radius = []
     for label in unique_labels:
         cluster_points = X[labels == label]
-        if len(cluster_points) > 50:
-            continue
         print(f"Cluster {label} has {len(cluster_points)} points.")
-
+        if len(cluster_points) > 100:
+            continue
         center = cluster_points.mean(axis=0)
+        distances = np.linalg.norm(cluster_points - center, axis=1)
         centers.append(center)
-    return np.array(centers).astype(int)
+        radius.append(distances.max())
+    return np.array(centers).astype(int), np.array(radius).astype(int)
 
