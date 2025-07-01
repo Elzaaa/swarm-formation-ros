@@ -30,6 +30,7 @@ else
                 -v /dev:/dev \
                 -v $ROOT_DIR/noetic_ws:/noetic_ws \
                 -v $ROOT_DIR/venv:/venv \
+                -v $ROOT_DIR/scripts:/scripts \
                --net=host \
                --privileged \
                --name ros-noetic ros-noetic-img

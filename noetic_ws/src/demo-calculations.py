@@ -36,7 +36,7 @@ if __name__ == "__main__":
     
     obstacles, radius = cl.find_clusters_centers(obstacles_clusters, set(obstacles_clusters), obstacles_cells)
  
-    potential_map = calculate_potential_field(sliced_map, obstacles, radius, (70,110), repulsive_range=15)
+    potential_map = calculate_potential_field(sliced_map, obstacles, radius, (70,110),repulsive_range=35)
 
     # draw_heatmap(potential_map)
     # plt.show()
