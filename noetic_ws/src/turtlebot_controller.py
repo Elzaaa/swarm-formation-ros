@@ -12,7 +12,7 @@ import argparse
 #---------------------------------------- Import ROS
 import rospy
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Point, Twist
+from geometry_msgs.msg import Point, Twist, PoseWithCovarianceStamped
 #from tf.transformations import euler_from_quaternion
 import tf.transformations as tftr 
 import threading
@@ -52,8 +52,9 @@ class TurteblotController:
         
         # Topics
         
-        self.pub_cmd_vel = rospy.Publisher(f"{self.node_name}/cmd_vel", Twist, queue_size=1, latch=False)
-        self.sub_odom = rospy.Subscriber(f"{self.node_name}/odom", Odometry, self.odometry_callback)
+        self.pub_cmd_vel = rospy.Publisher(f"/cmd_vel", Twist, queue_size=1, latch=False)
+        # self.sub_odom = rospy.Subscriber(f"/amcl_pose", PoseWithCovarianceStamped, self.odometry_callback)
+        self.sub_odom = rospy.Subscriber(f"/odom", Odometry, self.odometry_callback)
         
         self.state = np.zeros(3)
         self.dstate = np.zeros(3)
@@ -76,6 +77,14 @@ class TurteblotController:
         # Complete Rotation Matrix
         self.rotation_matrix = np.zeros((3,3))  # here
 
+    def set_state_trajectory(self, state_trajectory):
+        """
+        Set the trajectory for the controller.
+        :param state_trajectory: List or array of [x, y, theta] representing the trajectory.
+        """
+        self.goal_trajectory = state_trajectory
+        rospy.loginfo(f"Trajectory set to: {self.goal_trajectory}")
+
     def set_state_goal(self, state_goal):
         """
         Set the goal state for the controller.
@@ -93,7 +102,8 @@ class TurteblotController:
         # Complete for y and orientation
         y = msg.pose.pose.position.y
         q = msg.pose.pose.orientation
-          
+
+        self.position = msg.pose.pose.position
         rospy.loginfo(msg.pose.pose.position)
         # Transform quat2euler using tf transformations: complete!
         current_rpy = tftr.euler_from_quaternion([q.x, q.y, q.z, q.w])
@@ -154,11 +164,11 @@ class TurteblotController:
         # self.new_state = np.linalg.inv(t_matrix) @ temp_pos.T
         self.new_state = np.dot(inv_t_matrix, np.transpose(temp_pos))
         self.new_state = [self.new_state[0], self.new_state[1], new_theta]
-        rospy.loginfo("New state for {}: {}".format(self.node_name, self.new_state))
+        # rospy.loginfo("New state for {}: {}".format(self.node_name, self.new_state))
 
         self.lock.release()
 
-    def __check_zero(self, xpos, ypos) -> bool:
+    def __check_zero(self, position: tuple, goal : tuple) -> bool:
         """
         Check if the robot is close to the goal state.
         :param xpos: x position of the robot.
@@ -167,8 +177,54 @@ class TurteblotController:
         :return: True if close to goal, False otherwise.
         """
         abs_error = 0.1
+        xpos = position[0] - goal[0]
+        ypos = position[1] - goal[1]
         return (abs(xpos) < abs_error and abs(ypos) < abs_error)
         
+    def spin_trajectory(self):
+    
+        rospy.loginfo('Trajectory navigation has been activated!')
+        
+        start_time = datetime.now()
+        rate = rospy.Rate(self.RATE)
+        self.time_start = rospy.get_time()
+        
+        while not rospy.is_shutdown() and datetime.now() - start_time < timedelta(100):
+
+            velocity = Twist()
+
+            if not all(self.new_state):
+                rate.sleep()
+            else:
+                if self.__check_zero((self.position.x,self.position.y), (self.state_goal[0], self.state_goal[1])):
+                        
+                    if len(self.goal_trajectory) < 1:
+                        rospy.loginfo(f"Goal state reached for {self.node_name}!")
+                        velocity.linear.x = 0
+                        velocity.angular.z = 0
+                        self.pub_cmd_vel.publish(velocity)
+                        break 
+                    else:
+                        self.state_goal = self.goal_trajectory.pop(0)
+                        rospy.loginfo(f"Next goal state for {self.node_name}: {self.state_goal}")
+                        rate.sleep()                  
+
+            t = rospy.get_time() - self.time_start
+            self.t = t
+            
+            action = self.ctrl.compute_action(self.new_state)
+
+            for k in range(2):
+                action[k] = np.clip(action[k], self.ctrl_bnds[k, 0], self.ctrl_bnds[k, 1])
+
+            velocity.linear.x = action[0]
+            velocity.angular.z = action[1]
+            self.pub_cmd_vel.publish(velocity)
+           
+            rate.sleep()
+           
+        rospy.loginfo('Task completed or interrupted!')
+     
     def spin(self):
     
         rospy.loginfo('ROS-Preset has been activated!')
@@ -178,20 +234,22 @@ class TurteblotController:
         self.time_start = rospy.get_time()
         
         while not rospy.is_shutdown() and datetime.now() - start_time < timedelta(100):
+
+            velocity = Twist()
+
             if not all(self.new_state):
                 rate.sleep()
             
-            if self.__check_zero(self.new_state[0], self.new_state[1]):
-                rospy.loginfo(f"Goal state reached for {self.node_name}!")
-                velocity.linear.x = 0
-                velocity.angular.z = 0
-                self.pub_cmd_vel.publish(velocity)
-                break 
+            # if self.__check_zero(self.new_state[0], self.new_state[1]):
+            #     rospy.loginfo(f"Goal state reached for {self.node_name}!")
+            #     velocity.linear.x = 0
+            #     velocity.angular.z = 0
+            #     self.pub_cmd_vel.publish(velocity)
+            #     break 
 
             t = rospy.get_time() - self.time_start
             self.t = t
             
-            velocity = Twist()
             
             # action = controllers.ctrl_selector('''COMPLETE!''')
             action = self.ctrl.compute_action(self.new_state)
@@ -263,3 +321,22 @@ class N_CTRL:
             alpha = -theta + np.arctan2(delta_y, delta_x)
             beta = -theta - alpha
             return [rho, alpha, beta]
+
+
+
+# header: 
+#   seq: 1
+#   stamp: 
+#     secs: 1751444185
+#     nsecs: 597995687
+#   frame_id: "map"
+# pose: 
+#   position: 
+#     x: 0.4924388825893402
+#     y: 0.5692068934440613
+#     z: 0.0
+#   orientation: 
+#     x: 0.0
+#     y: 0.0
+#     z: 0.3198186128604478
+#     w: 0.9474787886111324
