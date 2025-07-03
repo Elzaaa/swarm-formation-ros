@@ -1,6 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-from clusters import find_obstacles, find_clusters, find_clusters_centers
+import clusters as cl
 
 def open_matrix() -> np.ndarray: 
     b = np.loadtxt('raw_map.txt', dtype=int)
@@ -23,41 +23,23 @@ def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.
 if __name__ == "__main__":
     map = open_matrix()
     sliced_map = slice_map(map, distance=3.5, resolution=0.05)
-    obstacles = find_obstacles(sliced_map)
+    obstacles = cl.find_obstacles(sliced_map)
     
     print("Obstacles found at:", obstacles)
-    
-    # # Example of how to visualize the obstacles on the map
-    # plt.imshow(map, cmap='gray', interpolation='nearest')
-    # plt.scatter(obstacles[:, 1], obstacles[:, 0], color='red', label='Obstacles')
-    # plt.title('Map with Obstacles')
-    # plt.xlabel('X Coordinate')
-    # plt.ylabel('Y Coordinate')
-    # plt.legend()
-    # plt.show()
 
-    # inertias = []
-
-    # for i in range(1,11):
-    #     kmeans = KMeans(n_clusters=i)
-    #     kmeans.fit(obstacles)
-    #     inertias.append(kmeans.inertia_)
-
-    # plt.plot(range(1,11), inertias, marker='o')
-    # plt.title('Elbow method')
-    # plt.xlabel('Number of clusters')
-    # plt.ylabel('Inertia')
-    # plt.show()
-
-    labels = find_clusters(obstacles)
+    labels = cl.find_clusters(obstacles)
     unique_labels = set(labels) - {-1}  # Exclude noise label (-1)
 
-    centers = find_clusters_centers(labels, unique_labels, obstacles)
+    centers = cl.find_obstacles_info(labels, unique_labels, obstacles)
     print("Cluster centers found at:", centers)
 
     # Number of clusters in labels, ignoring noise if present.
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise_ = list(labels).count(-1)
+
+    boundaries = cl.find_boundaries(labels, unique_labels, obstacles)
+    print("Boundaries found at:", boundaries)
+    print("Boundaries x: ", boundaries[:, 1])
 
     print("Estimated number of clusters: %d" % n_clusters_)
     print("Estimated number of noise points: %d" % n_noise_)

@@ -1,4 +1,4 @@
-image: /noetic_ws/src/swarm_control/small_map.pgm
+image: small_map.pgm
 resolution: 0.050000
 origin: [-10.000000, -10.000000, 0.000000]
 negate: 0

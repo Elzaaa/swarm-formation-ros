@@ -19,7 +19,7 @@ def find_clusters(X: np.ndarray) -> np.ndarray:
     db = DBSCAN(eps=3, min_samples=5).fit(X)
     return db.labels_
 
-def find_clusters_centers(labels, unique_labels, X):
+def find_obstacles_info(labels, unique_labels, X):
     """Finds the centers of clusters in the map maunique_labels = set(labels) - {-1}  # Exclude noise label (-1)trix.
     :return: An array of cluster centers.
     """
@@ -35,4 +35,25 @@ def find_clusters_centers(labels, unique_labels, X):
         centers.append(center)
         radius.append(distances.max())
     return np.array(centers).astype(int), np.array(radius).astype(int)
+
+def find_boundaries(labels, unique_labels, X):
+    """Finds the centers of clusters in the map maunique_labels = set(labels) - {-1}  # Exclude noise label (-1)trix.
+    :return: An array of cluster centers.
+    """
+    max_length = 0
+    max_label = -1
+    for label in unique_labels:
+        cluster_points = X[labels == label]  
+        if len(cluster_points) > 100:
+           if len(cluster_points) > max_length:
+                max_length = len(cluster_points)
+                max_label = label
+                print(f"Boundary Cluster {label} has {len(cluster_points)} points.")
+
+    if (max_label == -1):
+        print("No valid boundary cluster found.")
+        return np.array([])
+    else:
+        print(f"Boundary Cluster {max_label} has {len(cluster_points)} points.")
+        return np.array(X[labels == max_label]).astype(int)
 
