@@ -22,7 +22,7 @@ def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.
 
     return map_matrix[start[0]:end[0], start[1]:end[1]]
 
-def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, repulsive_gain=5500, attractive_gain=5.0, repulsive_range=5):
+def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, repulsive_gain=7500, attractive_gain=5.0, repulsive_range=15):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
@@ -30,7 +30,7 @@ def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, r
     # Attractive potential (vectorized)
     if goal is not None:
         d_goal = np.linalg.norm(coords - np.array(goal), axis=1)
-        U_att = 0.5 * attractive_gain * np.power(d_goal, 2)
+        U_att = 0.5 * attractive_gain * np.power(d_goal, 1)
         U_att = U_att.reshape(rows, cols)
     else : 
         U_att = np.zeros((rows * cols,), dtype=float).reshape(rows, cols)
@@ -61,7 +61,6 @@ def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, r
     U_rep2 = U_rep2.reshape(rows, cols)
 
     # Repulsive potential for boundaries
-    print("Boundaries length: ", len(boundaries))
     if boundaries is not None and len(boundaries) > 0:
         boundaries = np.array(boundaries)
         dists_boundaries = cdist(coords, boundaries)
@@ -79,10 +78,13 @@ def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, r
     # 
     # high_potential_mask = (map_matrix == 100) #| (map_matrix == -1)
     # potential_map[high_potential_mask] = 150
+    # zero_potential_mask = (map_matrix == -1)
+    # potential_map[zero_potential_mask] = 0
 
     return potential_map
 
 def get_next_step(potential_map, ix, iy):
+    print("Getting next step from potential map")
     motion = get_motion_model()
     minp = potential_map[iy][ix]
     minix, miniy = ix, iy
@@ -129,7 +131,7 @@ def get_motion_model():
     """
     return [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 
-def gradient_descent_2d(arr, start, max_steps=1000):
+def gradient_descent_2d(arr, start, step_size=3, max_steps=1000):
     """
     Perform discrete gradient descent on a 2D array from a given start point.
     Args:
@@ -139,11 +141,12 @@ def gradient_descent_2d(arr, start, max_steps=1000):
     Returns:
         path: list of (row, col) tuples showing the steps taken
     """
+    print("Performing gradient descent on 2D array")
     rows, cols = arr.shape
     pos = start
     path = [pos]
     
-    for _ in range(max_steps):
+    for i in range(max_steps*3):
         r, c = pos
         min_val = arr[r, c]
         next_pos = pos
@@ -161,5 +164,6 @@ def gradient_descent_2d(arr, start, max_steps=1000):
             # Local minimum reached
             break
         pos = next_pos
-        path.append(pos)
+        if i % 3 == 0:
+            path.append(pos)
     return path

@@ -53,8 +53,8 @@ class TurteblotController:
         # Topics
         
         self.pub_cmd_vel = rospy.Publisher(f"/cmd_vel", Twist, queue_size=1, latch=False)
-        # self.sub_odom = rospy.Subscriber(f"/amcl_pose", PoseWithCovarianceStamped, self.odometry_callback)
-        self.sub_odom = rospy.Subscriber(f"/odom", Odometry, self.odometry_callback)
+        self.sub_odom = rospy.Subscriber(f"/amcl_pose", PoseWithCovarianceStamped, self.odometry_callback)
+        # self.sub_odom = rospy.Subscriber(f"/odom", Odometry, self.odometry_callback)
         
         self.state = np.zeros(3)
         self.dstate = np.zeros(3)
@@ -72,9 +72,32 @@ class TurteblotController:
                 [-2.84, 2.84] # angular velocity limit
         ])
 
+        self.x_pos = 0
+        self.y_pos = 0
+        self.theta = 0
+
         self.ctrl = N_CTRL(self.ctrl_bnds)
         
         # Complete Rotation Matrix
+        self.rotation_matrix = np.zeros((3,3))  # here
+
+    def _init_variables(self):
+        """
+        Initialize or reset variables used in the controller.
+        """
+        self.state = np.zeros(3)
+        self.dstate = np.zeros(3)
+        self.new_state = np.zeros(3)
+        self.new_dstate = np.zeros(3)
+        
+        self.rotation_counter = 0
+        self.prev_theta = 0
+        self.new_theta = 0
+        
+        self.x_pos = 0
+        self.y_pos = 0
+        self.theta = 0
+
         self.rotation_matrix = np.zeros((3,3))  # here
 
     def set_state_trajectory(self, state_trajectory):
@@ -82,7 +105,9 @@ class TurteblotController:
         Set the trajectory for the controller.
         :param state_trajectory: List or array of [x, y, theta] representing the trajectory.
         """
+        self.trajectory_index = 0
         self.goal_trajectory = state_trajectory
+        self.state_goal = self.goal_trajectory[self.trajectory_index]
         rospy.loginfo(f"Trajectory set to: {self.goal_trajectory}")
 
     def set_state_goal(self, state_goal):
@@ -103,13 +128,17 @@ class TurteblotController:
         y = msg.pose.pose.position.y
         q = msg.pose.pose.orientation
 
-        self.position = msg.pose.pose.position
-        rospy.loginfo(msg.pose.pose.position)
+        self.x_pos = msg.pose.pose.position.x
+        self.y_pos = msg.pose.pose.position.y
+        # rospy.loginfo(msg.pose.pose.position)
+        # rospy.loginfo(msg.pose.pose.orientation)
         # Transform quat2euler using tf transformations: complete!
         current_rpy = tftr.euler_from_quaternion([q.x, q.y, q.z, q.w])
         
         # Extract Theta (orientation about Z)
         theta = current_rpy[2]
+        
+        self.theta = theta
         
         self.state = [x, y, 0, theta]
         
@@ -152,6 +181,7 @@ class TurteblotController:
         
         # Orientation transform
         new_theta = theta - theta_goal
+        # rospy.loginfo(f"Current position: ({x}, {y}), Orientation: {theta}")
         
         # Do position transform
         
@@ -176,10 +206,17 @@ class TurteblotController:
         :param theta: orientation of the robot.
         :return: True if close to goal, False otherwise.
         """
-        abs_error = 0.1
+        abs_error = 0.075
+        theta_error = 0.1
+
         xpos = position[0] - goal[0]
         ypos = position[1] - goal[1]
-        return (abs(xpos) < abs_error and abs(ypos) < abs_error)
+        theta_pos = position[2] - goal[2]
+        # print("Theta position: ", position[2])
+        # print("Theta goal: ", goal[2])
+        # print("Theta error: ", theta_pos)
+
+        return (abs(xpos) < abs_error and abs(ypos) < abs_error and abs(theta_pos) < abs_error)
         
     def spin_trajectory(self):
     
@@ -194,20 +231,22 @@ class TurteblotController:
             velocity = Twist()
 
             if not all(self.new_state):
+                print("New state empty")
                 rate.sleep()
-            else:
-                if self.__check_zero((self.position.x,self.position.y), (self.state_goal[0], self.state_goal[1])):
-                        
-                    if len(self.goal_trajectory) < 1:
-                        rospy.loginfo(f"Goal state reached for {self.node_name}!")
-                        velocity.linear.x = 0
-                        velocity.angular.z = 0
-                        self.pub_cmd_vel.publish(velocity)
-                        break 
-                    else:
-                        self.state_goal = self.goal_trajectory.pop(0)
-                        rospy.loginfo(f"Next goal state for {self.node_name}: {self.state_goal}")
-                        rate.sleep()                  
+           
+            if self.__check_zero((self.x_pos,self.y_pos), (self.state_goal[0], self.state_goal[1])):
+                    
+                if len(self.goal_trajectory) < 1:
+                    rospy.loginfo(f"Goal state reached for {self.node_name}!")
+                    velocity.linear.x = 0
+                    velocity.angular.z = 0
+                    self.pub_cmd_vel.publish(velocity)
+                    break 
+                else:
+                    self.trajectory_index += 1
+                    self.state_goal = self.goal_trajectory[self.trajectory_index]
+                    rospy.loginfo(f"Next goal state for {self.node_name}: {self.state_goal}")
+                    rate.sleep()                  
 
             t = rospy.get_time() - self.time_start
             self.t = t
@@ -239,7 +278,13 @@ class TurteblotController:
 
             if not all(self.new_state):
                 rate.sleep()
-            
+
+            if self.__check_zero((self.x_pos,self.y_pos, self.theta), (self.state_goal[0], self.state_goal[1], self.state_goal[2])):
+                rospy.loginfo(f"Goal {self.state_goal}, reached")
+                velocity.linear.x = 0
+                velocity.angular.z = 0
+                self.pub_cmd_vel.publish(velocity)
+                break
             # if self.__check_zero(self.new_state[0], self.new_state[1]):
             #     rospy.loginfo(f"Goal state reached for {self.node_name}!")
             #     velocity.linear.x = 0
@@ -249,9 +294,10 @@ class TurteblotController:
 
             t = rospy.get_time() - self.time_start
             self.t = t
-            
+            # rospy.loginfo(f"Position{self.x_pos, self.y_pos, self.theta}, New state: {self.new_state}, Goal state: {self.state_goal}")
             
             # action = controllers.ctrl_selector('''COMPLETE!''')
+            # action = self.ctrl.compute_action([self.x_pos,self.y_pos, self.theta], self.state_goal)
             action = self.ctrl.compute_action(self.new_state)
             
             # self.system.receive_action(action)
@@ -281,7 +327,7 @@ class TurteblotController:
            
             rate.sleep()
            
-        rospy.loginfo('Task completed or interrupted!')
+        return self.x_pos, self.y_pos
      
 
 
@@ -297,8 +343,8 @@ class N_CTRL:
         def __init__(self, ctrl_bounds) -> list:
             self.ctrl_bounds = ctrl_bounds
             self.kappa_rho = 0.15
-            self.kappa_alpha = 0.17
-            self.kappa_betha = - 0.05
+            self.kappa_alpha = 0.45
+            self.kappa_betha = - 0.3
             
             
         def compute_action(self, observation):
@@ -306,10 +352,10 @@ class N_CTRL:
             v = self.kappa_rho * polar_coord[0]
             w = (self.kappa_alpha * polar_coord[1]) + (self.kappa_betha * polar_coord[2])
 
-            if (np.abs(observation[0]) < 0.1 and np.abs(observation[1]) < 0.1):
-                v = 0
-            if (np.abs(observation[1]) < 0.1):
-                w = 0
+            # if (np.abs(observation[0]) < 0.1 and np.abs(observation[1]) < 0.1):
+            #     v = 0
+            # if (np.abs(observation[1]) < 0.1):
+            #     w = 0
             return [v,w]
         
         def _transform_2_polar(self, observation): 
@@ -322,21 +368,3 @@ class N_CTRL:
             beta = -theta - alpha
             return [rho, alpha, beta]
 
-
-
-# header: 
-#   seq: 1
-#   stamp: 
-#     secs: 1751444185
-#     nsecs: 597995687
-#   frame_id: "map"
-# pose: 
-#   position: 
-#     x: 0.4924388825893402
-#     y: 0.5692068934440613
-#     z: 0.0
-#   orientation: 
-#     x: 0.0
-#     y: 0.0
-#     z: 0.3198186128604478
-#     w: 0.9474787886111324
