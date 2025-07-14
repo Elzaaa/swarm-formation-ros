@@ -87,6 +87,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+COPY docker/requirements.txt requirements.txt
+RUN pip install -r requirements.txt
 
 # Required for non-glvnd setups.
 ENV LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64

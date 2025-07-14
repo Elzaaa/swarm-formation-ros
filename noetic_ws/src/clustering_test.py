@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     print("Estimated number of clusters: %d" % n_clusters_)
     print("Estimated number of noise points: %d" % n_noise_)
-
+    print(obstacles)
     plt.scatter(obstacles[:, 1], obstacles[:, 0], c=labels)
     plt.show()
 
