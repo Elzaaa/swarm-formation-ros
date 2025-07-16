@@ -4,7 +4,7 @@ from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 import rospy
 import time
-from potential_map import calculate_potential_field, slice_map, gradient_descent_2d, get_path_to_goal, get_next_step
+from potential_map import calculate_potential_field, slice_map, gradient_descent_2d, get_path_to_goal, get_next_step, calculate_first_follower_map, calculate_second_follower_map
 import clusters as cl
 from matplotlib.animation import FuncAnimation
 
@@ -23,7 +23,7 @@ class MappingNode:
 
         self.path_ready = False
 
-        rospy.init_node('potential_field_calculator')
+        
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.set_goal )
         rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
         rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.set_initial_pose)
@@ -35,7 +35,7 @@ class MappingNode:
         self.fig, (self.ax1, self.ax2) = plt.subplots(1,2, figsize=(12, 6))
 
     def run_animation(self, block: bool):
-        ani = FuncAnimation(self.fig, self.plot_surface, init_func=self.plot_init, interval=2000)
+        ani = FuncAnimation(self.fig, self.plot_surface, init_func=self.plot_init, interval=500)
         plt.show(block=block)
 
     def draw_heatmap(self,data, path):
@@ -87,11 +87,46 @@ class MappingNode:
         self.initial_point = (index_y,index_x)
     
     def get_next_position(self, x: float, y: float, range=3):
+        print("getting next position for ({},{})".format(x,y))
         ix, iy = self.__pose_to_grid_index(x=x,y=y)
+        print("getting next position for index ({},{})".format(ix,iy))
         if ix is None or iy is None:
             new_iy, new_ix = get_next_step(self.potential_map, ix, iy)
         else:
             path = gradient_descent_2d(self.potential_map, (iy,ix), max_steps=range)
+        new_iy, new_ix = path[-1] if path else (iy, ix)
+        print("next position for index ({},{})".format(new_ix,new_iy))
+        return self.__grid_index_to_pose(new_ix, new_iy)
+    
+    def get_follower1_next_position(self, x: float, y: float, leader_x: float, leader_y: float, follower2_x: float, follower2_y: float, range=3):
+        potential_map_copy = self.potential_map.copy()
+        ix, iy = self.__pose_to_grid_index(x=x,y=y)
+
+        # Calculate the local potential map for the first follower
+        leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
+        follower2_ix, follower2_iy = self.__pose_to_grid_index(x=follower2_x,y=follower2_y)
+        follower1_map = calculate_first_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower2_iy, follower2_ix]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)    
+        if ix is None or iy is None:
+            new_iy, new_ix = get_next_step(follower1_map, ix, iy)
+        else:
+            path = gradient_descent_2d(follower1_map, (iy,ix), max_steps=range)
+        new_iy, new_ix = path[-1] if path else (iy, ix)
+        return self.__grid_index_to_pose(new_ix, new_iy)
+    
+
+    def get_follower2_next_position(self, x: float, y: float, leader_x: float, leader_y: float, follower1_x: float, follower1_y: float, range=3):
+        potential_map_copy = self.potential_map.copy()
+        ix, iy = self.__pose_to_grid_index(x=x,y=y)
+        # Calculate the local potential map for the second follower
+        leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
+        follower1_ix, follower1_iy = self.__pose_to_grid_index(x=follower1_x,y=follower1_y)
+        follower2_map = calculate_second_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower1_iy, follower1_ix]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)    
+        
+        # Use gradient descent to find the next position
+        if ix is None or iy is None:
+            new_iy, new_ix = get_next_step(follower2_map, ix, iy)
+        else:
+            path = gradient_descent_2d(follower2_map, (iy,ix), max_steps=range)
         new_iy, new_ix = path[-1] if path else (iy, ix)
         return self.__grid_index_to_pose(new_ix, new_iy)
     
@@ -135,10 +170,10 @@ class MappingNode:
         Callback function to process the OccupancyGrid message and calculate the potential field.
         :param msg: OccupancyGrid message containing the map data.
         """
-        print("Entered callback")
-        print("Map dimensions: {}x{}".format(msg.info.width, msg.info.height))
-        print("Map resolution: {}".format(msg.info.resolution))
-        print("Map origin: ({}, {})".format(msg.info.origin.position.x, msg.info.origin.position.y))
+        # print("Entered callback")
+        # print("Map dimensions: {}x{}".format(msg.info.width, msg.info.height))
+        # print("Map resolution: {}".format(msg.info.resolution))
+        # print("Map origin: ({}, {})".format(msg.info.origin.position.x, msg.info.origin.position.y))
 
         self.map_origin_x = msg.info.origin.position.x
         self.map_origin_y = msg.info.origin.position.y
@@ -163,6 +198,8 @@ class MappingNode:
         self.radius = radius
         self.boundaries = boundaries
         self.potential_map = calculate_potential_field(self.raw_map, obstacles, radius, boundaries, self.goal)
+        # self.potential_map = calculate_first_follower_map(self.potential_map, np.array([170,200]), np.array([162, 208]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)
+        # self.potential_map = calculate_second_follower_map(self.potential_map, np.array([170,200]), np.array([162, 196]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)
     
     def save_map(self):
         """
@@ -176,6 +213,7 @@ class MappingNode:
 if __name__ == "__main__":
 
     try:
+        rospy.init_node('potential_field_calculator')
         node = MappingNode()
         node.run_animation(block=True)
         # rospy.spin()
