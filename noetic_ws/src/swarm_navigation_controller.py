@@ -26,6 +26,8 @@ class NavigationController:
 		self.follower1_y_pos = 0.0
 		self.follower2_x_pos = 0.0
 		self.follower2_y_pos = 0.0
+  
+		self.path_index = 0
 
 	def update_leader_position(self, msg):
 		with self.lock:
@@ -63,29 +65,52 @@ class NavigationController:
 
 			if not self.mapping_node.path_ready:
 				rospy.loginfo("Waiting for path to be ready...")
-				rate.sleep()
+				rospy.sleep(1)
 				continue
-
+			
 			range=2
+   
+			path = np.asarray(self.mapping_node.path_pose)
+			coords = path[:,:2]
+			dist = np.linalg.norm(np.array([leader_x, leader_y]) - coords, axis=1)
+			print("Calculated distances: {}".format(dist))
+			new_index = np.argmin(dist)
+			if (new_index > self.path_index):
+				self.path_index = new_index
+				print("Current path goal: {}".format(path[self.path_index]))
+			elif (dist[new_index] <= 0.1):
+				self.path_index = new_index + 1
 
-			leader_x_goal, leader_y_goal = self.mapping_node.get_next_position(leader_x, leader_y, range=range)
-			leader_theta = np.arctan2(leader_y_goal - leader_y, leader_x_goal - leader_x)
+			print("Path Status: {}, {}".format(self.path_index, path.size))
+			if (self.path_index+1 > path.size):
+				self.path_index -= 1
+				# rospy.loginfo("Goal reached")
+				# rospy.signal_shutdown()
+			
+			# leader_x_goal, leader_y_goal = self.mapping_node.get_next_position(leader_x, leader_y, range=range)
+			# leader_theta = np.arctan2(leader_y_goal - leader_y, leader_x_goal - leader_x)
+			rospy.loginfo(f"Current Leader position: ({leader_x}, {leader_y})")
+			leader_x_goal = path[self.path_index][0]
+			leader_y_goal = path[self.path_index][1]
+			leader_theta = path[self.path_index][2]
 			self.turtlebot_leader.set_state_goal(state_goal=[leader_x_goal, leader_y_goal, leader_theta])
-
-			follower1_x_goal, follower1_y_goal = self.mapping_node.get_follower1_next_position(
+   
+			rospy.loginfo(f"Current Follower 1 position: ({follower1_x}, {follower1_y})")
+			follower1_x_goal, follower1_y_goal, follower1_theta = self.mapping_node.get_follower1_next_position(
 				x=follower1_x, y=follower1_y, 
 				leader_x=leader_x_goal, leader_y=leader_y_goal, 
 				follower2_x=follower2_x, follower2_y=follower2_y,
 				range=range)
-			follower1_theta = np.arctan2(follower1_y_goal - follower1_y, follower1_x_goal - follower1_x)
+			
 			self.turtlebot_follower1.set_state_goal(state_goal=[follower1_x_goal, follower1_y_goal, leader_theta])
-
-			follower2_x_goal, follower2_y_goal = self.mapping_node.get_follower2_next_position(
+			
+			rospy.loginfo(f"Current Follower 2 position: ({follower2_x}, {follower2_y})")
+			follower2_x_goal, follower2_y_goal, follower2_theta = self.mapping_node.get_follower2_next_position(
 				x=follower2_x, y=follower2_y,
 				leader_x=leader_x_goal, leader_y=leader_y_goal, 
-				follower1_x=follower1_x, follower1_y=follower1_y,
+				follower1_x=follower1_x_goal, follower1_y=follower1_y_goal,
 				range=range)
-			follower2_theta = np.arctan2(follower2_y_goal - follower2_y, follower2_x_goal - follower2_x)
+			
 			self.turtlebot_follower2.set_state_goal(state_goal=[follower2_x_goal, follower2_y_goal, leader_theta])
 
 			leader_thread = threading.Thread(target=self.turtlebot_leader.spin)
@@ -100,21 +125,27 @@ class NavigationController:
 			
 			rospy.loginfo("Leader and followers have been updated.")
 			rate.sleep()
-
+			
 	
 if __name__ == '__main__':
 	navigationController = NavigationController()
 	rospy.init_node('navigation_controller_node')
-	# nav_thread = threading.Thread(target=navigationController.navigation_loop)
+	nav_thread = threading.Thread(target=navigationController.navigation_loop)
 	
 	try:
-		# nav_thread.start()
-		navigationController.navigation_loop()
+		nav_thread.start()
+		# navigationController.navigation_loop()
 		print("Navigation loop started.")
-		rospy.spin()  # Let ROS handle callbacks
+		navigationController.mapping_node.run_animation(block=True)
+		# rospy.spin()  # Let ROS handle callbacks
 	except KeyboardInterrupt:
 		rospy.signal_shutdown("KeyboardInterrupt")
+
 		# nav_thread.join()
 		print("Exiting...")
+	except rospy.exceptions.ROSInterruptException as e:
+		print(f"Error: {e}")
+		navigationController.mapping_node.close()
+		nav_thread.join()
 
 

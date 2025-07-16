@@ -22,6 +22,9 @@ class MappingNode:
         self.raw_map = np.zeros((384,384)) 
 
         self.path_ready = False
+        
+        self.follower1_pose = None
+        self.follower2_pose = None
 
         
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.set_goal )
@@ -37,6 +40,9 @@ class MappingNode:
     def run_animation(self, block: bool):
         ani = FuncAnimation(self.fig, self.plot_surface, init_func=self.plot_init, interval=500)
         plt.show(block=block)
+        
+    def close(self):
+        plt.close()
 
     def draw_heatmap(self,data, path):
         c = self.ax2.pcolor(data,cmap='viridis', vmax=5000)
@@ -60,7 +66,11 @@ class MappingNode:
             self.ax1.scatter(self.path_pose[:,0],self.path_pose[:,1], c='red', label='Path', marker='*')
             self.ax1.set_xlim(-3, 3)   # Set x-axis limits: min=0, max=6
             self.ax1.set_ylim(-3, 3)  # 
-
+        if self.follower1_pose:
+            self.ax1.scatter(self.follower1_pose[0],self.follower1_pose[1],c='green',marker='*')
+        if self.follower2_pose is not None:
+            self.ax1.scatter(self.follower2_pose[0],self.follower2_pose[1],c='yellow',marker='*')
+            
     def plot_potential_map(self):
         X, Y = np.meshgrid(np.arange(self.potential_map.shape[1]), np.arange(self.potential_map.shape[0]))
         self.surf = self.ax1.plot_surface(X, Y, self.potential_map, cmap='viridis', edgecolor='k', linewidth=0.5, antialiased=True)
@@ -72,7 +82,7 @@ class MappingNode:
         # self.plot_potential_map()
 
     def plot_surface(self,frame : np.ndarray): 
-        print("Plotting surface")
+        # print("Plotting surface")
         self.ax1.clear()  # Clear the previous surface
         self.ax2.clear()  # Clear the previous surface
  
@@ -105,30 +115,27 @@ class MappingNode:
         # Calculate the local potential map for the first follower
         leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
         follower2_ix, follower2_iy = self.__pose_to_grid_index(x=follower2_x,y=follower2_y)
-        follower1_map = calculate_first_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower2_iy, follower2_ix]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)    
-        if ix is None or iy is None:
-            new_iy, new_ix = get_next_step(follower1_map, ix, iy)
-        else:
-            path = gradient_descent_2d(follower1_map, (iy,ix), max_steps=range)
+        follower1_map = calculate_first_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower2_iy, follower2_ix]))    
+        path = gradient_descent_2d(follower1_map, (iy,ix), max_steps=range)
         new_iy, new_ix = path[-1] if path else (iy, ix)
-        return self.__grid_index_to_pose(new_ix, new_iy)
+        self.follower1_pose = self.__grid_index_to_pose(new_ix, new_iy)
+        theta = np.arctan2(self.follower1_pose[1] - y, self.follower1_pose[0] - x)
+        return self.follower1_pose, theta
     
 
     def get_follower2_next_position(self, x: float, y: float, leader_x: float, leader_y: float, follower1_x: float, follower1_y: float, range=3):
         potential_map_copy = self.potential_map.copy()
         ix, iy = self.__pose_to_grid_index(x=x,y=y)
+        
         # Calculate the local potential map for the second follower
         leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
         follower1_ix, follower1_iy = self.__pose_to_grid_index(x=follower1_x,y=follower1_y)
-        follower2_map = calculate_second_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower1_iy, follower1_ix]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)    
-        
-        # Use gradient descent to find the next position
-        if ix is None or iy is None:
-            new_iy, new_ix = get_next_step(follower2_map, ix, iy)
-        else:
-            path = gradient_descent_2d(follower2_map, (iy,ix), max_steps=range)
+        follower2_map = calculate_second_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower1_iy, follower1_ix]))    
+        path = gradient_descent_2d(follower2_map, (iy,ix), max_steps=range)
         new_iy, new_ix = path[-1] if path else (iy, ix)
-        return self.__grid_index_to_pose(new_ix, new_iy)
+        self.follower2_pose = self.__grid_index_to_pose(new_ix, new_iy)
+        theta = np.arctan2(self.follower2_pose[1] - y, self.follower2_pose[0] - x)
+        return self.follower2_pose, theta
     
     def set_goal(self,msg: PoseStamped): 
         print("Goal set to : ({},{})".format(msg.pose.position.x, msg.pose.position.y))
@@ -198,7 +205,7 @@ class MappingNode:
         self.radius = radius
         self.boundaries = boundaries
         self.potential_map = calculate_potential_field(self.raw_map, obstacles, radius, boundaries, self.goal)
-        # self.potential_map = calculate_first_follower_map(self.potential_map, np.array([170,200]), np.array([162, 208]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)
+        # self.potential_map = calculate_first_follower_map(self.potential_map, np.array([170,200]), np.array([165, 205]))
         # self.potential_map = calculate_second_follower_map(self.potential_map, np.array([170,200]), np.array([162, 196]), repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5)
     
     def save_map(self):
