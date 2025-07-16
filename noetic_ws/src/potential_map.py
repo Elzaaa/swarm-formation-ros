@@ -22,7 +22,60 @@ def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.
 
     return map_matrix[start[0]:end[0], start[1]:end[1]]
 
-def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, repulsive_gain=7500, attractive_gain=5.0, repulsive_range=15):
+def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5):
+    rows, cols = potential_map.shape
+    xs, ys = np.indices((rows, cols))
+    coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+
+    # Treat other robots as obstacles
+    robots = np.vstack([leader_pos, extra_foll_pos])
+    dists = cdist(coords, robots)
+    mask = (dists < repulsive_range) & (dists != 0)
+    with np.errstate(divide='ignore'):
+        rep_term = 0.5 * repulsive_gain * (1.0/dists - 1.0/repulsive_range)**2
+    rep_term[~mask] = 0
+    U_rep = np.sum(rep_term, axis=1)
+    U_rep = U_rep.reshape(rows, cols)
+
+    # Treat expected position as attraction force
+    if leader_pos is not None:
+        estimated_pos = np.array([leader_pos[0] - 5, leader_pos[1] - 5])
+        d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
+        estimated_goal_mask = (d_goal < 5) & (d_goal != 0)
+        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        U_att[~estimated_goal_mask] = 0
+        U_att = U_att.reshape(rows, cols)
+
+    return potential_map + U_rep + U_att
+
+def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5):
+    rows, cols = potential_map.shape
+    xs, ys = np.indices((rows, cols))
+    coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+
+    # Treat other robots as obstacles
+    robots = np.vstack([leader_pos, extra_foll_pos])
+    dists = cdist(coords, robots)
+    mask = (dists < repulsive_range) & (dists != 0)
+    with np.errstate(divide='ignore'):
+        rep_term = 0.5 * repulsive_gain * (1.0/dists - 1.0/repulsive_range)**2
+    rep_term[~mask] = 0
+    U_rep = np.sum(rep_term, axis=1)
+    U_rep = U_rep.reshape(rows, cols)
+
+    # Treat expected position as attraction force
+    if leader_pos is not None:
+        estimated_pos = np.array([leader_pos[0] - 5, leader_pos[1] + 5])
+        d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
+        estimated_goal_mask = (d_goal < 5) & (d_goal != 0)
+        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        U_att[~estimated_goal_mask] = 0
+        U_att = U_att.reshape(rows, cols)
+
+    return potential_map + U_rep + U_att
+
+
+def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=7500, attractive_gain=5.0, repulsive_range=15):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
@@ -73,13 +126,8 @@ def calculate_potential_field(map_matrix, obstacles, radius, boundaries, goal, r
     else:
         U_rep_boundaries = np.zeros((rows, cols), dtype=float)
 
-    # High potential for obstacles and unknowns
+    # Potential map sum
     potential_map = U_att + U_rep + U_rep2 + U_rep_boundaries
-    # 
-    # high_potential_mask = (map_matrix == 100) #| (map_matrix == -1)
-    # potential_map[high_potential_mask] = 150
-    # zero_potential_mask = (map_matrix == -1)
-    # potential_map[zero_potential_mask] = 0
 
     return potential_map
 

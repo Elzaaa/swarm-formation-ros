@@ -19,6 +19,7 @@ class NavigationController:
 	def update_current_position(self, msg):
 		self.x_pos = msg.pose.pose.position.x
 		self.y_pos = msg.pose.pose.position.y
+		print(f"[Callback] Current position updated: {self.x_pos}, {self.y_pos}")
 	
 	def spin(self):
 		while True:
@@ -26,6 +27,7 @@ class NavigationController:
 				print("Waiting for path to be ready...")
 				rospy.sleep(1)
 				continue
+			print("Robot position:", self.x_pos, self.y_pos)
 			x,y = self.mapping_node.get_next_position(self.x_pos, self.y_pos, range=3)
 			theta = np.arctan2(y - self.y_pos, x - self.x_pos)
 			print(f"Current position: ({self.x_pos}, {self.y_pos}), Next position: ({x}, {y}. {theta})")
@@ -52,20 +54,21 @@ class NavigationController:
 if __name__ == '__main__':
 	navigationController = NavigationController()
 	mapping_node = navigationController.mapping_node
-	t1 = threading.Thread(target=mapping_node.run_animation(block=False))
+	# t1 = threading.Thread(target=mapping_node.run_animation(block=False))
 	t2 = threading.Thread(target=navigationController.spin)
 
 	try:
 		while 1: 
 			t2.start()
-			t1.start()
+			mapping_node.run_animation(block=True)
+			# t1.start()
 	except KeyboardInterrupt:
 
-		t1.join()
+		# t1.join()
 		t2.join()
 	
 	except rospy.exceptions.ROSInterruptException as e:
 		print(f"Error: {e}")
-		t1.join()
+		# t1.join()
 		t2.join()
 
