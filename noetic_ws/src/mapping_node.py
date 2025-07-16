@@ -120,7 +120,7 @@ class MappingNode:
         new_iy, new_ix = path[-1] if path else (iy, ix)
         self.follower1_pose = self.__grid_index_to_pose(new_ix, new_iy)
         theta = np.arctan2(self.follower1_pose[1] - y, self.follower1_pose[0] - x)
-        return self.follower1_pose, theta
+        return self.follower1_pose[0], self.follower1_pose[1], theta
     
 
     def get_follower2_next_position(self, x: float, y: float, leader_x: float, leader_y: float, follower1_x: float, follower1_y: float, range=3):
@@ -135,7 +135,7 @@ class MappingNode:
         new_iy, new_ix = path[-1] if path else (iy, ix)
         self.follower2_pose = self.__grid_index_to_pose(new_ix, new_iy)
         theta = np.arctan2(self.follower2_pose[1] - y, self.follower2_pose[0] - x)
-        return self.follower2_pose, theta
+        return self.follower2_pose[0], self.follower2_pose[1], theta
     
     def set_goal(self,msg: PoseStamped): 
         print("Goal set to : ({},{})".format(msg.pose.position.x, msg.pose.position.y))

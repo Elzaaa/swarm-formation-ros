@@ -22,10 +22,12 @@ def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.
 
     return map_matrix[start[0]:end[0], start[1]:end[1]]
 
-def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=5500, attractive_gain=50.0, repulsive_range=4):
+def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=6000, attractive_gain=500.0, repulsive_range=3.5):
     rows, cols = potential_map.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+    
+    formation_distance = 2
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -39,19 +41,21 @@ def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarr
 
     # Treat expected position as attraction force
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - 6, leader_pos[1] - 6])
+        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] - formation_distance])
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
         estimated_goal_mask = (d_goal < 15) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 1)
+        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
         U_att[~estimated_goal_mask] = 0
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
 
-def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=7500, attractive_gain=50.0, repulsive_range=4):
+def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=6000, attractive_gain=500.0, repulsive_range=3.5):
     rows, cols = potential_map.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+    
+    formation_distance = 2
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -65,17 +69,17 @@ def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndar
 
     # Treat expected position as attraction force
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - 6, leader_pos[1] + 6])
+        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] + formation_distance])
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
         estimated_goal_mask = (d_goal < 15) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 1)
+        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
         U_att[~estimated_goal_mask] = 0
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
 
 
-def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=7500, attractive_gain=5.0, repulsive_range=15):
+def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=5500, attractive_gain=5.0, repulsive_range=10):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
