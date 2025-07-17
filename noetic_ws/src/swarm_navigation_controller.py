@@ -18,8 +18,8 @@ class NavigationController:
 		self.turtlebot_follower1 = TurteblotController(node_name="tb3_1")
 		self.turtlebot_follower2 = TurteblotController(node_name="tb3_2")
 		rospy.Subscriber("tb3_0/amcl_pose", PoseWithCovarianceStamped, self.update_leader_position)
-		rospy.Subscriber(f"tb3_1/amcl_pose", PoseWithCovarianceStamped, self.update_follower1_position)
-		rospy.Subscriber(f"tb3_2/amcl_pose", PoseWithCovarianceStamped, self.update_follower2_position)
+		rospy.Subscriber(f"tb3_1/odom", PoseWithCovarianceStamped, self.update_follower1_position)
+		rospy.Subscriber(f"tb3_2/odom", PoseWithCovarianceStamped, self.update_follower2_position)
 		self.leader_x_pos = 0.0
 		self.leader_y_pos = 0.0
 		self.follower1_x_pos = 0.0
@@ -34,7 +34,7 @@ class NavigationController:
 		self.follower1_x_goal = 0
 		self.follower1_y_goal = 0
 
-		self.range = 3
+		self.range = 4
   
 		self.path_index = 0
 
@@ -147,21 +147,23 @@ class NavigationController:
 
 			# path = np.delete(np.asarray(self.mapping_node.path_pose),0,0)
 			path = np.asarray(self.mapping_node.path_pose)
-			coords = path[:,:2]
-			dist = np.linalg.norm(np.array([self.leader_x_pos, self.leader_y_pos]) - coords, axis=1)
+			# coords = path[:,:2]
+			# dist = np.linalg.norm(np.array([self.leader_x_pos, self.leader_y_pos]) - coords, axis=1)
    
-			print("Calculated distances: {}".format(dist))
-			new_index = np.argmin(dist)
-			if (new_index > self.path_index):
-				self.path_index = new_index
-				print("Current path goal: {}".format(path[self.path_index]))
-			elif (dist[new_index] <= 0.1):
-				self.path_index = new_index + 1
+			# print("Calculated distances: {}".format(dist))
+			# new_index = np.argmin(dist)
+			# if (new_index > self.path_index):
+			# 	self.path_index = new_index
+			# 	print("Current path goal: {}".format(path[self.path_index]))
+			# elif (dist[new_index] <= 0.12):
+			# 	self.path_index = new_index + 1
+			# 	print("Move to the next one {}".format(path[self.path_index]))
+			self.path_index += 1 
 
 			print("Path Status: {}, {}".format(self.path_index, path.size))
 			if (self.path_index+1 > path.size):
 				self.path_index -= 1
-				# rospy.loginfo("Goal reached")
+				rospy.loginfo("FInal Goal reached")
 				# rospy.signal_shutdown()
 			
 			# leader_x_goal, leader_y_goal = self.mapping_node.get_next_position(leader_x, leader_y, range=range)
@@ -174,6 +176,7 @@ class NavigationController:
                                                     		 self.leader_y_goal, 
                                                        		 self.leader_theta])
 			self.turtlebot_leader.spin()
+			rospy.sleep(1)
 
 	def run_follower1(self):
 		rate = rospy.Rate(self.RATE)
@@ -181,7 +184,7 @@ class NavigationController:
 		while not rospy.is_shutdown():
 			
 			if not self.mapping_node.path_ready:
-				rospy.sleep(2)
+				rospy.sleep(5)
 				continue
 
 			rospy.loginfo(f"Current Follower 1 position: ({self.follower1_x_pos }, {self.follower1_y_pos})")
@@ -194,8 +197,9 @@ class NavigationController:
 			self.follower1_x_goal = follower1_x_goal
 			self.follower1_y_goal = follower1_y_goal
 				
-			self.turtlebot_follower1.set_state_goal(state_goal=[follower1_x_goal, follower1_y_goal, follower1_theta])
+			self.turtlebot_follower1.set_state_goal(state_goal=[follower1_x_goal, follower1_y_goal, self.leader_theta])
 			self.turtlebot_follower1.spin()
+			rospy.sleep(1)
    
 	def run_follower2(self):
 		rate = rospy.Rate(self.RATE)
@@ -203,7 +207,7 @@ class NavigationController:
 		while not rospy.is_shutdown():
 
 			if not self.mapping_node.path_ready:
-				rospy.sleep(2)
+				rospy.sleep(5)
 				continue
 
 			rospy.loginfo(f"Current Follower 2 position: ({self.follower2_x_pos}, {self.follower2_y_pos})")
@@ -213,8 +217,9 @@ class NavigationController:
 				follower1_x=self.follower1_x_goal, follower1_y=self.follower1_y_goal,
 				range=self.range)
 			
-			self.turtlebot_follower2.set_state_goal(state_goal=[follower2_x_goal, follower2_y_goal, follower2_theta])
+			self.turtlebot_follower2.set_state_goal(state_goal=[follower2_x_goal, follower2_y_goal, self.leader_theta])
 			self.turtlebot_follower2.spin()
+			rospy.sleep(1)
 
 # if __name__ == '__main__':
 # 	navigationController = NavigationController()

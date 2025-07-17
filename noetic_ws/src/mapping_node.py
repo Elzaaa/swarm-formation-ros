@@ -19,6 +19,8 @@ class MappingNode:
         self.path = []
         self.path_pose = np.array([])
         self.potential_map = np.zeros((139,139))  # Initialize potential map
+        self.follower1_map = np.zeros((139,139))  # Initialize potential map
+        self.follower2_map = np.zeros((139,139))  # Initialize potential map
         self.raw_map = np.zeros((384,384)) 
 
         self.path_ready = False
@@ -35,7 +37,11 @@ class MappingNode:
         # self.ax1 = self.fig.add_subplot(111, projection='3d')
         # self.ax2 = self.fig.add_subplot(433)
 
-        self.fig, (self.ax1, self.ax2) = plt.subplots(1,2, figsize=(12, 6))
+        self.fig, axs = plt.subplots(2,2, figsize=(12, 6))
+        self.ax1 = axs[0,0]
+        self.ax2 = axs[0,1] 
+        self.ax3 = axs[1,0] 
+        self.ax4 = axs[1,1]
 
     def run_animation(self, block: bool):
         ani = FuncAnimation(self.fig, self.plot_surface, init_func=self.plot_init, interval=500)
@@ -53,6 +59,20 @@ class MappingNode:
         if len(path) > 0:
             ys, xs = zip(*path)  # Unzip the path coordinates
             self.ax2.plot(xs, ys,marker='*', color='red', label='Path')
+        return c
+    
+    def draw_heatmap_1(self):
+        c = self.ax3.pcolor(self.follower1_map,cmap='viridis')
+        self.ax3.set_title('Follower 1 Occupancy Grid')
+        self.ax3.set_xlim(125,275)
+        self.ax3.set_ylim(125,275)
+        return c
+    
+    def draw_heatmap_2(self):
+        c = self.ax4.pcolor(self.follower2_map,cmap='viridis')
+        self.ax4.set_title('Follower 2 Occupancy Grid')
+        self.ax4.set_xlim(125,275)
+        self.ax4.set_ylim(125,275)
         return c
     
     def plot_map(self):
@@ -78,7 +98,11 @@ class MappingNode:
     def plot_init(self):
 
         c = self.draw_heatmap(self.potential_map, self.path)
+        c1 = self.draw_heatmap_1()
+        c2 = self.draw_heatmap_2()
         self.cbar = self.fig.colorbar(c, ax=self.ax2)
+        self.cbar2 = self.fig.colorbar(c1, ax=self.ax3)
+        self.cbar3 = self.fig.colorbar(c2, ax=self.ax4)
         # self.plot_potential_map()
 
     def plot_surface(self,frame : np.ndarray): 
@@ -87,7 +111,11 @@ class MappingNode:
         self.ax2.clear()  # Clear the previous surface
  
         c = self.draw_heatmap(self.potential_map, self.path)
+        c1 = self.draw_heatmap_1()
+        c2 = self.draw_heatmap_2()
         self.cbar.update_normal(c)
+        self.cbar2.update_normal(c1)
+        self.cbar3.update_normal(c2)
         self.plot_map()
         # self.plot_potential_map()
 
@@ -115,7 +143,8 @@ class MappingNode:
         # Calculate the local potential map for the first follower
         leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
         follower2_ix, follower2_iy = self.__pose_to_grid_index(x=follower2_x,y=follower2_y)
-        follower1_map = calculate_first_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower2_iy, follower2_ix]))    
+        follower1_map = calculate_first_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower2_iy, follower2_ix]))
+        self.follower1_map = follower1_map
         path = gradient_descent_2d(follower1_map, (iy,ix), max_steps=range)
         new_iy, new_ix = path[-1] if path else (iy, ix)
         self.follower1_pose = self.__grid_index_to_pose(new_ix, new_iy)
@@ -130,7 +159,8 @@ class MappingNode:
         # Calculate the local potential map for the second follower
         leader_ix, leader_iy = self.__pose_to_grid_index(x=leader_x,y=leader_y)
         follower1_ix, follower1_iy = self.__pose_to_grid_index(x=follower1_x,y=follower1_y)
-        follower2_map = calculate_second_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower1_iy, follower1_ix]))    
+        follower2_map = calculate_second_follower_map(potential_map_copy, np.array([leader_iy,leader_ix]), np.array([follower1_iy, follower1_ix]))
+        self.follower2_map = follower2_map
         path = gradient_descent_2d(follower2_map, (iy,ix), max_steps=range)
         new_iy, new_ix = path[-1] if path else (iy, ix)
         self.follower2_pose = self.__grid_index_to_pose(new_ix, new_iy)
@@ -224,8 +254,6 @@ if __name__ == "__main__":
         node = MappingNode()
         node.run_animation(block=True)
         # rospy.spin()
-
-        # node.save_map()
         # print("Potential map saved to potential_map.txt")
     except KeyboardInterrupt:
         # node.save_map()

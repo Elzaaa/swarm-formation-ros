@@ -27,7 +27,7 @@ def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarr
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
     
-    formation_distance = 2
+    formation_distance = 5
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -40,12 +40,17 @@ def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarr
     U_rep = U_rep.reshape(rows, cols)
 
     # Treat expected position as attraction force
+    # print("Leader pose for follower 1: {}".format(leader_pos))
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] - formation_distance])
+        estimated_pos = np.array([leader_pos[0] + formation_distance, leader_pos[1] - formation_distance])
+        # print("Estimated pose for follower 1: {}".format(estimated_pos))
+        
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
-        estimated_goal_mask = (d_goal < 15) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        estimated_goal_mask = (d_goal < 20)
+        with np.errstate(divide='ignore'):
+            U_att = - 0.5 * attractive_gain * np.power(d_goal, -3)
         U_att[~estimated_goal_mask] = 0
+        U_att[(d_goal == 0)] = -500
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
@@ -55,7 +60,7 @@ def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndar
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
     
-    formation_distance = 2
+    formation_distance = 5
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -68,18 +73,22 @@ def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndar
     U_rep = U_rep.reshape(rows, cols)
 
     # Treat expected position as attraction force
+    # print("Leader pose for follower 2: {}".format(leader_pos))
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] + formation_distance])
+        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] - formation_distance])
+        # print("Estimated pose for follower 2: {}".format(estimated_pos))
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
-        estimated_goal_mask = (d_goal < 15) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        estimated_goal_mask = (d_goal < 20)
+        with np.errstate(divide='ignore'):
+            U_att = - 0.5 * attractive_gain * np.power(d_goal, -3)
         U_att[~estimated_goal_mask] = 0
+        U_att[(d_goal == 0)] = -500
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
 
 
-def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=5500, attractive_gain=5.0, repulsive_range=10):
+def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=6500, attractive_gain=5.0, repulsive_range=10):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
@@ -183,7 +192,7 @@ def get_motion_model():
     """
     return [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 
-def gradient_descent_2d(arr, start, step_size=4, max_steps=1000):
+def gradient_descent_2d(arr, start, step_size=3, max_steps=1000):
     """
     Perform discrete gradient descent on a 2D array from a given start point.
     Args:
@@ -201,6 +210,7 @@ def gradient_descent_2d(arr, start, step_size=4, max_steps=1000):
     for i in range(1,max_steps*step_size):
         r, c = pos
         min_val = arr[r, c]
+        # print("Starting value: {}".format(min_val))
         next_pos = pos
         # Explore 8 neighbors
         for dr in [-1, 0, 1]:
@@ -210,6 +220,7 @@ def gradient_descent_2d(arr, start, step_size=4, max_steps=1000):
                 nr, nc = r + dr, c + dc
                 if 0 <= nr < rows and 0 <= nc < cols:
                     if arr[nr, nc] < min_val:
+                        # print("Comparing value at {}, {} with value {}".format(nr,nc,arr[nr,nc]))
                         min_val = arr[nr, nc]
                         next_pos = (nr, nc)
         if next_pos == pos:

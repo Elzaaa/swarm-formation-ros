@@ -57,13 +57,13 @@
         
     </node>
     <node name="spawn_urdf_1" pkg="gazebo_ros" type="spawn_model"
-            args="-urdf -model tb3_1 -x -2.30 -y -0.15 -z 0.00 -Y 0 -param robot_description"
+            args="-urdf -model tb3_1 -x -2.25 -y -0.15 -z 0.00 -Y 0 -param robot_description"
             output="screen"/>
 
         <!-- AMCL -->
     <include file="$(find swarm_control)/launch/amcl.launch">
         <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
-        <arg name="initial_pose_x" value="-2.30"/>
+        <arg name="initial_pose_x" value="-2.25"/>
         <arg name="initial_pose_y" value="-0.15"/>
         <arg name="initial_pose_a" value="0.0"/>
         <arg name="odom_frame_id" value="tb3_1/odom"/>
@@ -86,13 +86,13 @@
             
         </node>
         <node name="spawn_urdf_2" pkg="gazebo_ros" type="spawn_model"
-                args="-urdf -model tb3_2 -x -2.30 -y -0.85 -z 0.0 -Y 0 -param robot_description"
+                args="-urdf -model tb3_2 -x -2.25 -y -0.85 -z 0.0 -Y 0 -param robot_description"
                 output="screen"/>
 
                 <!-- AMCL -->
         <include file="$(find swarm_control)/launch/amcl.launch">
             <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
-            <arg name="initial_pose_x" value="-2.30"/>
+            <arg name="initial_pose_x" value="-2.25"/>
             <arg name="initial_pose_y" value="-0.85"/>
             <arg name="initial_pose_a" value="0.0"/>
             <arg name="odom_frame_id" value="tb3_2/odom"/>
