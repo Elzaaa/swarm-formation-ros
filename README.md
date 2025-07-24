@@ -8,7 +8,7 @@ The system coordinates multiple robots to maintain formations (e.g., line or V-s
 ## Table of Contents
 
 - [Overview](#overview)
-- [Getting Started](#getting-started)🧑
+- [Getting Started](#getting-started)
 - [Project Structure](#project-structure) 
 
 ### Overview
