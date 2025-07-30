@@ -33,16 +33,16 @@ class MappingNode:
         rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
         rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.set_initial_pose)
 
-        # self.fig = plt.figure(figsize=(8,6))
-        # self.ax1 = self.fig.add_subplot(111, projection='3d')
+        self.fig = plt.figure(figsize=(8,6))
+        self.ax1 = self.fig.add_subplot(111, projection='3d')
         # self.ax2 = self.fig.add_subplot(433)
 
-        self.fig, axs = plt.subplots(2,2, figsize=(15, 6))
-        self.fig.tight_layout()
-        self.ax1 = axs[0,0]
-        self.ax2 = axs[0,1] 
-        self.ax3 = axs[1,0] 
-        self.ax4 = axs[1,1]
+        # self.fig, axs = plt.subplots(2,2, figsize=(15, 6))
+        # self.fig.tight_layout()
+        # self.ax1 = axs[0,0]
+        # self.ax2 = axs[0,1] 
+        # self.ax3 = axs[1,0] 
+        # self.ax4 = axs[1,1]
 
     def run_animation(self, block: bool):
         ani = FuncAnimation(self.fig, self.plot_surface, init_func=self.plot_init, interval=500)
@@ -94,31 +94,31 @@ class MappingNode:
             
     def plot_potential_map(self):
         X, Y = np.meshgrid(np.arange(self.potential_map.shape[1]), np.arange(self.potential_map.shape[0]))
-        self.surf = self.ax1.plot_surface(X, Y, self.potential_map, cmap='viridis', edgecolor='k', linewidth=0.5, antialiased=True)
+        self.surf = self.ax1.plot_surface(X, Y, self.potential_map, cmap='viridis', edgecolor='k', linewidth=0.5, antialiased=True, vmax=2500)
 
     def plot_init(self):
 
-        c = self.draw_heatmap(self.potential_map, self.path)
-        c1 = self.draw_heatmap_1()
-        c2 = self.draw_heatmap_2()
-        self.cbar = self.fig.colorbar(c, ax=self.ax2)
-        self.cbar2 = self.fig.colorbar(c1, ax=self.ax3)
-        self.cbar3 = self.fig.colorbar(c2, ax=self.ax4)
-        # self.plot_potential_map()
+        # c = self.draw_heatmap(self.potential_map, self.path)
+        # c1 = self.draw_heatmap_1()
+        # c2 = self.draw_heatmap_2()
+        # self.cbar = self.fig.colorbar(c, ax=self.ax2)
+        # self.cbar2 = self.fig.colorbar(c1, ax=self.ax3)
+        # self.cbar3 = self.fig.colorbar(c2, ax=self.ax4)
+        self.plot_potential_map()
 
     def plot_surface(self,frame : np.ndarray): 
         # print("Plotting surface")
         self.ax1.clear()  # Clear the previous surface
-        self.ax2.clear()  # Clear the previous surface
+        # self.ax2.clear()  # Clear the previous surface
  
-        c = self.draw_heatmap(self.potential_map, self.path)
-        c1 = self.draw_heatmap_1()
-        c2 = self.draw_heatmap_2()
-        self.cbar.update_normal(c)
-        self.cbar2.update_normal(c1)
-        self.cbar3.update_normal(c2)
-        self.plot_map()
-        # self.plot_potential_map()
+        # c = self.draw_heatmap(self.potential_map, self.path)
+        # c1 = self.draw_heatmap_1()
+        # c2 = self.draw_heatmap_2()
+        # self.cbar.update_normal(c)
+        # self.cbar2.update_normal(c1)
+        # self.cbar3.update_normal(c2)
+        # self.plot_map()
+        self.plot_potential_map()
 
     def set_initial_pose(self, msg: PoseWithCovarianceStamped):
         print("Initial position set to: ({},{})".format(msg.pose.pose.position.x, msg.pose.pose.position.y))

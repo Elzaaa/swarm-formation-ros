@@ -88,7 +88,7 @@ def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndar
     return potential_map + U_rep + U_att
 
 
-def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=6500, attractive_gain=5.0, repulsive_range=10):
+def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=6500, attractive_gain=5.0, repulsive_range=12):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
