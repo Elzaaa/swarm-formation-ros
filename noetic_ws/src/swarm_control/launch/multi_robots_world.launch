@@ -12,30 +12,27 @@
 
     <!-- Map server -->
     <arg name="map_file" default="$(find turtlebot3_navigation)/maps/map.yaml"/>
-     <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
+    <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
 
     <!-- Robot 0 -->
     <group ns="tb3_0">
 
         <param name="tf_prefix" value="tb3_0"/>
-        
+
         <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
 
-        <param name="robot_description"
-                command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
+        <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
 
         <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
             <param name="publish_frequency" type="double" value="50.0"/>
-            
+
         </node>
-        <node name="spawn_urdf_0" pkg="gazebo_ros" type="spawn_model"
-                args="-urdf -model tb3_0 -x -2 -y -0.5 -z 0.0 -Y 0 -param robot_description"
-                output="screen"/>
+        <node name="spawn_urdf_0" pkg="gazebo_ros" type="spawn_model" args="-urdf -model tb3_0 -x -1.9 -y -0.5 -z 0.0 -Y 0 -param robot_description" output="screen"/>
 
         <!-- AMCL -->
         <include file="$(find swarm_control)/launch/amcl.launch">
             <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
-            <arg name="initial_pose_x" value="-2.0"/>
+            <arg name="initial_pose_x" value="-1.9"/>
             <arg name="initial_pose_y" value="-0.5"/>
             <arg name="initial_pose_a" value="0.0"/>
             <arg name="odom_frame_id" value="tb3_0/odom"/>
@@ -46,29 +43,26 @@
 
     <!-- Robot 1 -->
     <group ns="tb3_1">
-    <param name="tf_prefix" value="tb3_1"/>
+        <param name="tf_prefix" value="tb3_1"/>
 
-    <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
+        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
 
-    <param name="robot_description"
-            command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_1" output="screen">
-        <param name="publish_frequency" type="double" value="50.0"/>
-        
-    </node>
-    <node name="spawn_urdf_1" pkg="gazebo_ros" type="spawn_model"
-            args="-urdf -model tb3_1 -x -2.25 -y -0.25 -z 0.00 -Y 0 -param robot_description"
-            output="screen"/>
+        <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
+        <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_1" output="screen">
+            <param name="publish_frequency" type="double" value="50.0"/>
+
+        </node>
+        <node name="spawn_urdf_1" pkg="gazebo_ros" type="spawn_model" args="-urdf -model tb3_1 -x -2.25 -y -0.15 -z 0.00 -Y 0 -param robot_description" output="screen"/>
 
         <!-- AMCL -->
-    <include file="$(find swarm_control)/launch/amcl.launch">
-        <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
-        <arg name="initial_pose_x" value="-2.25"/>
-        <arg name="initial_pose_y" value="-0.25"/>
-        <arg name="initial_pose_a" value="0.0"/>
-        <arg name="odom_frame_id" value="tb3_1/odom"/>
-        <arg name="base_frame_id" value="tb3_1/base_footprint"/>
-    </include>
+        <include file="$(find swarm_control)/launch/amcl.launch">
+            <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
+            <arg name="initial_pose_x" value="-2.25"/>
+            <arg name="initial_pose_y" value="-0.15"/>
+            <arg name="initial_pose_a" value="0.0"/>
+            <arg name="odom_frame_id" value="tb3_1/odom"/>
+            <arg name="base_frame_id" value="tb3_1/base_footprint"/>
+        </include>
 
     </group>
 
@@ -79,21 +73,18 @@
 
         <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
 
-        <param name="robot_description"
-                command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
+        <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
         <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_2" output="screen">
             <param name="publish_frequency" type="double" value="50.0"/>
-            
-        </node>
-        <node name="spawn_urdf_2" pkg="gazebo_ros" type="spawn_model"
-                args="-urdf -model tb3_2 -x -2.25 -y -0.75 -z 0.0 -Y 0 -param robot_description"
-                output="screen"/>
 
-                <!-- AMCL -->
+        </node>
+        <node name="spawn_urdf_2" pkg="gazebo_ros" type="spawn_model" args="-urdf -model tb3_2 -x -2.25 -y -0.85 -z 0.0 -Y 0 -param robot_description" output="screen"/>
+
+        <!-- AMCL -->
         <include file="$(find swarm_control)/launch/amcl.launch">
             <!-- <arg name="scan_topic" value="tb3_0/scan"/> -->
             <arg name="initial_pose_x" value="-2.25"/>
-            <arg name="initial_pose_y" value="-0.75"/>
+            <arg name="initial_pose_y" value="-0.85"/>
             <arg name="initial_pose_a" value="0.0"/>
             <arg name="odom_frame_id" value="tb3_2/odom"/>
             <arg name="base_frame_id" value="tb3_2/base_footprint"/>

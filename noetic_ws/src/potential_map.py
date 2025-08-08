@@ -22,10 +22,12 @@ def slice_map(map_matrix: np.ndarray, distance: float, resolution: float) -> np.
 
     return map_matrix[start[0]:end[0], start[1]:end[1]]
 
-def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5):
+def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=6000, attractive_gain=500.0, repulsive_range=3.5):
     rows, cols = potential_map.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+    
+    formation_distance = 5
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -38,20 +40,27 @@ def calculate_first_follower_map(potential_map: np.ndarray, leader_pos: np.ndarr
     U_rep = U_rep.reshape(rows, cols)
 
     # Treat expected position as attraction force
+    # print("Leader pose for follower 1: {}".format(leader_pos))
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - 5, leader_pos[1] - 5])
+        estimated_pos = np.array([leader_pos[0] + formation_distance, leader_pos[1] - formation_distance])
+        # print("Estimated pose for follower 1: {}".format(estimated_pos))
+        
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
-        estimated_goal_mask = (d_goal < 5) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        estimated_goal_mask = (d_goal < 20)
+        with np.errstate(divide='ignore'):
+            U_att = - 0.5 * attractive_gain * np.power(d_goal, -3)
         U_att[~estimated_goal_mask] = 0
+        U_att[(d_goal == 0)] = -500
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
 
-def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=7500, attractive_gain=5.0, repulsive_range=5):
+def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndarray, extra_foll_pos: np.ndarray,  repulsive_gain=6000, attractive_gain=500.0, repulsive_range=3.5):
     rows, cols = potential_map.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
+    
+    formation_distance = 5
 
     # Treat other robots as obstacles
     robots = np.vstack([leader_pos, extra_foll_pos])
@@ -64,18 +73,22 @@ def calculate_second_follower_map(potential_map: np.ndarray, leader_pos: np.ndar
     U_rep = U_rep.reshape(rows, cols)
 
     # Treat expected position as attraction force
+    # print("Leader pose for follower 2: {}".format(leader_pos))
     if leader_pos is not None:
-        estimated_pos = np.array([leader_pos[0] - 5, leader_pos[1] + 5])
+        estimated_pos = np.array([leader_pos[0] - formation_distance, leader_pos[1] - formation_distance])
+        # print("Estimated pose for follower 2: {}".format(estimated_pos))
         d_goal = np.linalg.norm(coords - np.array(estimated_pos), axis=1)
-        estimated_goal_mask = (d_goal < 5) & (d_goal != 0)
-        U_att = - 0.5 * attractive_gain * np.power(d_goal, 3)
+        estimated_goal_mask = (d_goal < 20)
+        with np.errstate(divide='ignore'):
+            U_att = - 0.5 * attractive_gain * np.power(d_goal, -3)
         U_att[~estimated_goal_mask] = 0
+        U_att[(d_goal == 0)] = -500
         U_att = U_att.reshape(rows, cols)
 
     return potential_map + U_rep + U_att
 
 
-def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=7500, attractive_gain=5.0, repulsive_range=15):
+def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , radius, boundaries, goal, repulsive_gain=6500, attractive_gain=5.0, repulsive_range=12):
     rows, cols = map_matrix.shape
     xs, ys = np.indices((rows, cols))
     coords = np.stack([xs, ys], axis=-1).reshape(-1, 2)
@@ -117,9 +130,9 @@ def calculate_potential_field(map_matrix: np.ndarray, obstacles: np.ndarray , ra
     if boundaries is not None and len(boundaries) > 0:
         boundaries = np.array(boundaries)
         dists_boundaries = cdist(coords, boundaries)
-        mask_boundaries = (dists_boundaries < repulsive_range) & (dists_boundaries != 0)
+        mask_boundaries = (dists_boundaries < 5) & (dists_boundaries != 0)
         with np.errstate(divide='ignore'):
-            rep_term_boundaries = 0.5 * repulsive_gain * (1.0/dists_boundaries - 1.0/repulsive_range)**2
+            rep_term_boundaries = 0.5 * repulsive_gain * (1.0/dists_boundaries - 1.0/5)**2
         rep_term_boundaries[~mask_boundaries] = 0
         U_rep_boundaries = np.sum(rep_term_boundaries, axis=1)
         U_rep_boundaries = U_rep_boundaries.reshape(rows, cols)
@@ -192,11 +205,12 @@ def gradient_descent_2d(arr, start, step_size=3, max_steps=1000):
     print("Performing gradient descent on 2D array")
     rows, cols = arr.shape
     pos = start
-    path = [pos]
+    path = []
     
-    for i in range(max_steps*3):
+    for i in range(1,max_steps*step_size):
         r, c = pos
         min_val = arr[r, c]
+        # print("Starting value: {}".format(min_val))
         next_pos = pos
         # Explore 8 neighbors
         for dr in [-1, 0, 1]:
@@ -206,12 +220,14 @@ def gradient_descent_2d(arr, start, step_size=3, max_steps=1000):
                 nr, nc = r + dr, c + dc
                 if 0 <= nr < rows and 0 <= nc < cols:
                     if arr[nr, nc] < min_val:
+                        # print("Comparing value at {}, {} with value {}".format(nr,nc,arr[nr,nc]))
                         min_val = arr[nr, nc]
                         next_pos = (nr, nc)
         if next_pos == pos:
             # Local minimum reached
+            print("Local minima reached")
             break
         pos = next_pos
-        if i % 3 == 0:
+        if i % step_size == 0:
             path.append(pos)
     return path

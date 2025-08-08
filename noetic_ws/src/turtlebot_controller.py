@@ -53,8 +53,8 @@ class TurteblotController:
         # Topics
         
         self.pub_cmd_vel = rospy.Publisher(f"{self.node_name}/cmd_vel", Twist, queue_size=1, latch=False)
-        self.sub_odom = rospy.Subscriber(f"{self.node_name}/amcl_pose", PoseWithCovarianceStamped, self.odometry_callback)
-        # self.sub_odom = rospy.Subscriber(f"/odom", Odometry, self.odometry_callback)
+        # self.sub_odom = rospy.Subscriber(f"{self.node_name}/amcl_pose", PoseWithCovarianceStamped, self.odometry_callback)
+        self.sub_odom = rospy.Subscriber(f"{self.node_name}/odom", Odometry, self.odometry_callback)
         
         self.state = np.zeros(3)
         self.dstate = np.zeros(3)
@@ -206,8 +206,8 @@ class TurteblotController:
         :param theta: orientation of the robot.
         :return: True if close to goal, False otherwise.
         """
-        abs_error = 0.1
-        theta_error = 0.2
+        abs_error = 0.065
+        theta_error = 0.1
 
         xpos = position[0] - goal[0]
         ypos = position[1] - goal[1]
@@ -342,9 +342,9 @@ class N_CTRL:
         #####################################################################################################
         def __init__(self, ctrl_bounds) -> list:
             self.ctrl_bounds = ctrl_bounds
-            self.kappa_rho = 0.2
+            self.kappa_rho = 0.15
             self.kappa_alpha = 0.3
-            self.kappa_betha = - 0.2
+            self.kappa_betha = - 0.1
             
             
         def compute_action(self, observation):
